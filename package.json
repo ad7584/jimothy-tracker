@@ -1,0 +1,19 @@
+{
+  "name": "jimothy-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Real-time intelligence dashboard for Jimothy, the short-spine raccoon of Ballard, Seattle. Fuses news, forum, fediverse, encyclopedia-attention and civic signals into one live map with corroboration scoring. Zone resolution only, on purpose.",
+  "scripts": {
+    "start": "node src/runner.mjs",
+    "dev": "node src/runner.mjs",
+    "once": "node src/runner.mjs --once",
+    "test": "node src/tools/privacy-test.mjs && node src/tools/render-test.mjs",
+    "test:privacy": "node src/tools/privacy-test.mjs",
+    "test:render": "node src/tools/render-test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jimothy Tracker — live intelligence on a raccoon nobody can find</title>
+<meta name="description" content="Live tracker for Jimothy, the short-spine raccoon of Ballard, Seattle. Street cameras, sighting corroboration, territory modelling and image recognition. Every number sourced. Zone resolution only, on purpose.">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to dashboard</a>
+
+<!-- Jakob's Law: a conventional app bar, exactly where people expect it. -->
+<header class="topbar">
+  <a class="brand" href="#main">
+    <span class="mark" aria-hidden="true">◉</span>
+    <span class="name">JIMOTHY<span class="thin">TRACKER</span></span>
+  </a>
+  <div class="ticker" id="ticker" aria-live="off"></div>
+  <div class="topmeta">
+    <span class="clock mono" id="clock">--:--:--</span>
+    <span id="conn" class="pill" role="status">CONNECTING</span>
+    <button id="kbtn" class="kbtn" aria-label="Open command palette">⌘K</button>
+  </div>
+</header>
+
+<!-- Heartbeat. The pipeline telemetry used to occupy a full 12-column band
+     above the feed; the part anyone actually watches is "is it alive and what
+     did it just do", which is one line. The console itself moved to the bottom. -->
+<section class="heartbeat" aria-label="Pipeline activity">
+  <span class="hbrate" id="hbRate"><i></i><span>IDLE</span></span>
+  <span class="hbline" id="hbLine">waiting for the pipeline…</span>
+  <a class="hbjump" href="#opsPanel">CONSOLE ↓</a>
+</section>
+
+<!-- Headline strip: one line, slides, clickable. Deliberately small — it is
+     context, not the product. -->
+<section class="hstrip" id="carousel" aria-roledescription="carousel" aria-label="Jimothy headlines">
+  <span class="hlive"><i></i>HEADLINES</span>
+  <div class="htrack"><a class="hslide" id="cfeat" target="_blank" rel="noopener"></a></div>
+  <div class="hnav">
+    <span class="hcount" id="hcount"></span>
+    <button class="cnav" id="cPrev" aria-label="Previous headline">‹</button>
+    <button class="cnav" id="cNext" aria-label="Next headline">›</button>
+  </div>
+  <div class="cprogress"><i id="cbar"></i></div>
+</section>
+
+<!-- Miller's Law: four chunks, no more. Serial position: the answer first. -->
+<section class="hero" aria-label="Key indicators">
+  <article class="hcard hcard-lead">
+    <h2 class="hlabel">LAST VERIFIED SIGHTING</h2>
+    <p class="hvalue" id="lastSighting">—</p>
+    <p class="hsub" id="lastSightingSub">waiting for data…</p>
+  </article>
+  <article class="hcard">
+    <h2 class="hlabel">ATTENTION <span class="model" title="Computed from measured inputs">MODEL</span></h2>
+    <p class="hvalue" id="attention">—</p>
+    <div class="meter"><i id="attentionBar"></i></div>
+    <p class="hsub" id="attentionSub">—</p>
+  </article>
+  <article class="hcard">
+    <h2 class="hlabel">FORAGING <span class="model" title="Computed from measured inputs">MODEL</span></h2>
+    <p class="hvalue" id="foraging">—</p>
+    <div class="meter"><i id="foragingBar"></i></div>
+    <p class="hsub" id="foragingSub">—</p>
+  </article>
+  <article class="hcard">
+    <h2 class="hlabel">SOURCES LIVE</h2>
+    <p class="hvalue" id="srcUp">—</p>
+    <div class="meter"><i id="srcBar"></i></div>
+    <p class="hsub" id="srcSub">—</p>
+  </article>
+</section>
+
+<main class="grid" id="main">
+
+  <!-- ROW 1 — look. Map and live cameras side by side, both above the fold.
+       Cameras used to be the seventh of eight panels, ~2,270px down. -->
+  <section class="panel panel-map">
+    <div class="phead">
+      <h2>INTEL MAP</h2>
+      <div class="scope" role="tablist" aria-label="Map scope">
+        <button class="sbtn is-on" id="scopeBallard" role="tab" aria-selected="true">BALLARD</button>
+        <button class="sbtn" id="scopeSeattle" role="tab" aria-selected="false">SEATTLE</button>
+      </div>
+    </div>
+
+    <div class="maprow">
+      <div class="mapwrap">
+        <div id="map" class="map"></div>
+        <div class="mapover" id="mapover"></div>
+      </div>
+      <aside class="side" id="sidePanel"></aside>
+    </div>
+
+    <div class="layers" id="layers">
+      <label class="ly ly-terr"><input type="checkbox" id="lyTerritory" checked><span>territory</span></label>
+      <label class="ly ly-wild"><input type="checkbox" id="lyWildlife" checked><span>raccoon GPS</span></label>
+      <label class="ly ly-chat"><input type="checkbox" id="lyChatter" checked><span>chatter</span></label>
+      <label class="ly ly-cam"><input type="checkbox" id="lyCams" checked><span>street cameras</span></label>
+      <label class="ly ly-waste"><input type="checkbox" id="lyWaste"><span>waste 311</span></label>
+    </div>
+
+    <p class="mapnote" id="mapnote"></p>
+  </section>
+
+  <section class="panel panel-cams">
+    <div class="phead"><h2>SEATTLE CAMERAS</h2><span class="tag mono" id="camCount">—</span></div>
+    <div class="camtabs" role="tablist" aria-label="Camera view">
+      <button class="ctab is-on" id="ctabWall" role="tab" aria-selected="true">WALL</button>
+      <button class="ctab" id="ctabStreet" role="tab" aria-selected="false">SINGLE</button>
+      <button class="ctab" id="ctabWild" role="tab" aria-selected="false">AREA · WA</button>
+    </div>
+
+    <!-- Every camera at once. Click a tile to open it with playback. -->
+    <div class="camwall" id="camWall" hidden></div>
+
+    <div class="camswitch" id="camSwitch"></div>
+    <div class="camstage" id="camStage"></div>
+
+    <!-- Time-lapse transport. Real recorded frames, played in sequence. -->
+    <div class="tape" id="tapeBar" hidden>
+      <button class="tapebtn" id="tapePlay" aria-label="Play time-lapse">▶</button>
+      <input class="tapescrub" id="tapeScrub" type="range" min="0" max="0" value="0" aria-label="Scrub frames">
+      <span class="tapemeta" id="tapeMeta"></span>
+    </div>
+
+    <p class="thelp" id="camNote"></p>
+    <p class="camwatch" id="camWatchLine"></p>
+  </section>
+
+  <!-- ROW 2 — evidence. What the machine actually found. -->
+  <section class="panel panel-leads">
+    <div class="phead">
+      <h2>LOCATED LEADS</h2>
+      <span class="tag mono" id="leadCount">—</span>
+    </div>
+    <p class="thelp">Only items that resolved to a zone. Everything else is chatter, and lives in the feed.</p>
+    <div id="leads" class="leads"></div>
+  </section>
+
+  <section class="panel panel-ledger">
+    <div class="phead"><h2>CORROBORATION</h2><span class="model">LADDER</span></div>
+    <p class="thelp">Promotion needs <strong>independent origin types</strong>, not volume. One loud source is not evidence.</p>
+    <div id="ledger" class="ledger"></div>
+  </section>
+
+  <section class="panel panel-recog">
+    <div class="phead"><h2>RECOGNITION QUEUE</h2><span id="visionStatus" class="pill">—</span></div>
+    <p class="thelp">Is it a raccoon? Is the torso short-spined? Model reasoning shown verbatim.</p>
+    <div id="recognition" class="recog"></div>
+  </section>
+
+  <!-- ROW 3 — model and context. -->
+  <section class="panel panel-zones">
+    <div class="phead"><h2>TERRITORY RANKING</h2><span class="model">MODEL</span></div>
+    <p class="thelp">observations 55% · food 30% · chatter 15%</p>
+    <div id="zones" class="zones"></div>
+  </section>
+
+  <!-- NEW. Weather, tide and civil twilight were fetched every cycle and
+       rendered nowhere — 0 references in the entire frontend — for a
+       crepuscular animal whose whole behaviour is governed by them. -->
+  <section class="panel panel-env">
+    <div class="phead"><h2>ENVIRONMENT</h2><span class="tag mono" id="envClock">—</span></div>
+    <p class="thelp">Raccoons are crepuscular. Civil twilight is the foraging window; rain suppresses it; low water opens the shoreline.</p>
+    <div id="env" class="env"></div>
+  </section>
+
+  <!-- NEW. 31 days x 4 language editions of pageviews were on the wire and
+       collapsed into a single 26-character caption. -->
+  <section class="panel panel-attn">
+    <div class="phead"><h2>WORLD ATTENTION</h2><span class="tag mono" id="attnTotal">—</span></div>
+    <p class="thelp">Wikipedia pageviews per language edition. Batch-computed, so it lags 24–48h.</p>
+    <div id="attn" class="attn"></div>
+  </section>
+
+  <!-- ROW 4 — volume, and the score. -->
+  <section class="panel panel-feed">
+    <div class="phead">
+      <h2>LIVE FEED</h2>
+      <span class="tag mono" id="feedCount">—</span>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Filter by platform"></div>
+    <div id="feed" class="feed" aria-live="polite"></div>
+    <p class="feednote" id="feednote"></p>
+  </section>
+
+  <!-- Von Restorff: the loudest single number on the page. -->
+  <section class="panel panel-prox" id="gauge">
+    <div class="phead">
+      <h2>PROXIMITY TO FINDING HIM</h2>
+      <span class="model" title="Scores the strength of current evidence, not the animal">MODEL</span>
+    </div>
+    <div class="gring">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="gtrack" cx="100" cy="100" r="84"/>
+        <circle class="gfill" id="gfill" cx="100" cy="100" r="84"/>
+      </svg>
+      <div class="gcentre">
+        <span class="gnum" id="gnum">—</span>
+        <span class="gof">/ 100</span>
+      </div>
+    </div>
+    <p class="gverdict" id="gverdict">—</p>
+    <div class="gbars" id="gbars"></div>
+    <p class="gnote" id="gnote"></p>
+  </section>
+
+  <!-- ROW 5 — system. How it knows what it knows. -->
+  <section class="panel panel-health" id="healthPanel">
+    <div class="phead"><h2>SOURCE HEALTH</h2><span class="tag mono" id="totals">—</span></div>
+    <div id="health" class="health"></div>
+  </section>
+
+  <section class="panel panel-ops" id="opsPanel">
+    <div class="phead">
+      <h2>LIVE OPERATIONS</h2>
+      <span class="opsrate" id="opsRate"><i></i><span>IDLE</span></span>
+    </div>
+    <div class="opsbar" id="opsBar"></div>
+    <div class="opsconsole" id="opsConsole"></div>
+    <p class="thelp" style="margin:12px 0 0">Real pipeline telemetry — fetches, frame diffs, model calls,
+      corroboration. Nothing here is simulated.</p>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="fcol">
+    <h3>METHOD</h3>
+    <p>Sources on independent timers → normalise → resolve location against a coordinate-verified
+      Ballard gazetteer → snap to zone → score → cluster in space and time → promote only on
+      <strong>independent origin count</strong>. One loud source is not evidence.</p>
+  </div>
+  <div class="fcol">
+    <h3>HONESTY</h3>
+    <p>All data real, never simulated. Anything computed is tagged <span class="model">MODEL</span> and
+      keeps a link to its inputs. Empty panels stay empty. <strong>We will never show a live dot</strong> —
+      nobody has that, including us.</p>
+  </div>
+  <div class="fcol">
+    <h3>WILDLIFE</h3>
+    <p><strong>Zone resolution only, on purpose.</strong> Governor Ferguson, announcing the award,
+      asked residents to <strong>&ldquo;keep a respectful distance&rdquo;</strong>. Suzanne West of
+      Sarvey Wildlife Care Center put it plainly: <em>&ldquo;Let&rsquo;s leave him be and don&rsquo;t
+      disrupt his day-to-day. Let him live out his days in peace as a wild raccoon.&rdquo;</em>
+      Capture would legally bar his release back to the wild. Do not approach, feed or follow wildlife.
+      <a href="https://sarveywildlife.org/" target="_blank" rel="noopener">Sarvey Wildlife</a> ·
+      <a href="https://www.paws.org/" target="_blank" rel="noopener">PAWS</a>.</p>
+  </div>
+  <div class="fbottom">
+    Fan-made. Not affiliated with Jimothy or the City of Seattle.
+    Built by <a href="https://github.com/0xbl33p" target="_blank" rel="noopener">0xbl33p</a>.
+    Google&nbsp;News · Bing&nbsp;News · Reddit · Mastodon · Bluesky&nbsp;(bridged) · MyBallard · X ·
+    Wikipedia · iNaturalist · NWS · NOAA · Seattle&nbsp;Open&nbsp;Data · SDOT · YouTube.
+  </div>
+</footer>
+
+<div id="palette" class="overlay" hidden>
+  <div class="palbox" role="dialog" aria-label="Command palette">
+    <input id="palInput" type="text" placeholder="Jump to a zone, panel, layer or camera…" autocomplete="off" spellcheck="false">
+    <div id="palList" class="pallist"></div>
+  </div>
+</div>
+
+<div id="dossier" class="overlay" hidden>
+  <div class="dosbox" role="dialog" aria-label="Zone dossier">
+    <button class="dosclose" id="dosClose" aria-label="Close">✕</button>
+    <div id="dosBody"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

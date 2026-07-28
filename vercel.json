@@ -7,9 +7,9 @@
   "cleanUrls": true,
   "redirects": [
     {
-      "source": "/:path*",
+      "source": "/(.*)",
       "has": [{ "type": "host", "value": "jimothy-monitor.vercel.app" }],
-      "destination": "https://jimothytracker.xyz/:path*",
+      "destination": "https://jimothytracker.xyz/$1",
       "permanent": true
     }
   ],

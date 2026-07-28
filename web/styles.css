@@ -550,6 +550,28 @@ h2{font-family:var(--mono); font-size:12px; letter-spacing:.18em; font-weight:60
 
 .empty{font-size:13px; color:var(--dim); padding:18px 0; line-height:1.7}
 
+/* ── about — static crawlable prose, panel-toned band above the footer ── */
+.sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
+.about{border-top:1px solid var(--line); background:var(--panel); padding:38px var(--pad) 42px}
+.about .ainner{max-width:960px; margin:0 auto}
+.about h2{font-family:var(--mono); font-size:13px; letter-spacing:.18em; color:var(--dim);
+  margin-bottom:14px}
+.about h2 + p{margin-top:0}
+.about p{font-size:13.5px; line-height:1.75; color:var(--dim); margin:10px 0; max-width:76ch}
+.about p strong{color:var(--text2)}
+.about a{color:var(--signal); text-decoration:none}
+.about a:hover{text-decoration:underline}
+.faq{margin-top:26px}
+.faq details{border-top:1px solid var(--line); padding:2px 0}
+.faq details:last-child{border-bottom:1px solid var(--line)}
+.faq summary{font-family:var(--mono); font-size:12.5px; letter-spacing:.04em; color:var(--text2);
+  padding:12px 0; cursor:pointer; list-style:none; display:flex; gap:10px; align-items:baseline}
+.faq summary::before{content:"▸"; color:var(--accent); transition:transform var(--fast)}
+.faq details[open] summary::before{transform:rotate(90deg)}
+.faq summary:hover{color:var(--text)}
+.faq details p{margin:2px 0 14px; padding-left:20px}
+
 /* ── footer ─────────────────────────────────────────────────────────── */
 .foot{border-top:1px solid var(--line); background:#0a0e12; padding:30px var(--pad) 24px;
   display:grid; grid-template-columns:repeat(3,1fr); gap:30px}

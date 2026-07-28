@@ -9,6 +9,17 @@ import { WEB_DIR, PORT } from "./config.mjs";
 import { subscribe, recent, stats } from "./engine/ops.mjs";
 import { tapeIndex, getFrame } from "./sources/camtape.mjs";
 
+// The Railway origin exists to serve /api behind the Vercel proxy, but it also
+// answers with a byte-identical copy of the dashboard — which Google indexes
+// as a competing duplicate of the canonical site. On Railway (or wherever
+// CANONICAL_ORIGIN says), 301 everything that is not /api to the real host.
+// Locally both env vars are absent, so localhost keeps serving the dashboard.
+const CANONICAL =
+  process.env.CANONICAL_ORIGIN ??
+  ((process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_GIT_COMMIT_SHA)
+    ? "https://jimothytracker.xyz"
+    : null);
+
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -17,6 +28,9 @@ const TYPES = {
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".ico": "image/x-icon",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
 };
 
 export class Server {
@@ -83,6 +97,11 @@ export class Server {
   async route(req, res) {
     const url = new URL(req.url, "http://localhost");
     const p = url.pathname;
+
+    if (CANONICAL && !p.startsWith("/api")) {
+      res.writeHead(301, { Location: CANONICAL + p + url.search, "Cache-Control": "no-store" });
+      return res.end();
+    }
 
     try {
       if (p === "/api/state") return this.json(res, this.getState(), 200, req);

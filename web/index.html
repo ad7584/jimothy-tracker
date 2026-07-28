@@ -4,13 +4,122 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Jimothy Tracker — live intelligence on a raccoon nobody can find</title>
-<meta name="description" content="Live tracker for Jimothy, the short-spine raccoon of Ballard, Seattle. Street cameras, sighting corroboration, territory modelling and image recognition. Every number sourced. Zone resolution only, on purpose.">
+<meta name="description" content="Live tracker for Jimothy, the short-spine raccoon of Ballard, Seattle. Street cameras, corroborated sightings and territory modelling. Zone resolution only.">
+
+<link rel="canonical" href="https://jimothytracker.xyz/">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="theme-color" content="#080b0f">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jimothy Tracker">
+<meta property="og:title" content="Jimothy Tracker — live intelligence on a raccoon nobody can find">
+<meta property="og:description" content="Live tracker for Jimothy, the short-spine raccoon of Ballard, Seattle. Street cameras, sighting corroboration, territory modelling and image recognition. Every number sourced.">
+<meta property="og:url" content="https://jimothytracker.xyz/">
+<meta property="og:image" content="https://jimothytracker.xyz/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Jimothy Tracker — live intelligence on a raccoon nobody can find. Ballard, Seattle.">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Jimothy Tracker — live intelligence on a raccoon nobody can find">
+<meta name="twitter:description" content="Live tracker for Jimothy, the short-spine raccoon of Ballard, Seattle. Every number sourced. Zone resolution only, on purpose.">
+<meta name="twitter:image" content="https://jimothytracker.xyz/og.png">
+<meta name="twitter:creator" content="@0xbl33p">
+
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <link rel="stylesheet" href="styles.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://jimothytracker.xyz/#website",
+      "url": "https://jimothytracker.xyz/",
+      "name": "Jimothy Tracker",
+      "description": "Live sighting tracker and intelligence dashboard for Jimothy, the short-spine raccoon of Ballard, Seattle.",
+      "publisher": { "@id": "https://jimothytracker.xyz/#author" }
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://jimothytracker.xyz/#app",
+      "name": "Jimothy Tracker",
+      "url": "https://jimothytracker.xyz/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires JavaScript",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "image": "https://jimothytracker.xyz/og.png",
+      "author": { "@id": "https://jimothytracker.xyz/#author" },
+      "about": {
+        "@type": "Thing",
+        "name": "Jimothy (raccoon)",
+        "description": "A wild raccoon in Ballard, Seattle with suspected short spine syndrome, who went viral in July 2026 and was named Washingtonian of the Day.",
+        "sameAs": "https://en.wikipedia.org/wiki/Jimothy_(raccoon)"
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://jimothytracker.xyz/#author",
+      "name": "0xbl33p",
+      "url": "https://github.com/0xbl33p",
+      "sameAs": [
+        "https://github.com/0xbl33p",
+        "https://x.com/0xbl33p"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://jimothytracker.xyz/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Who is Jimothy the raccoon?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Jimothy is a wild raccoon from Seattle's Ballard neighbourhood who went viral in July 2026 because of his unusually short, rounded body. He was filmed and named by Seattle resident Kiana Hall, and has since been honoured by Washington's governor and the Seattle City Council. His sex is actually unknown — \"he\" is used by convention." }
+        },
+        {
+          "@type": "Question",
+          "name": "What is short spine syndrome?",
+          "acceptedAnswer": { "@type": "Answer", "text": "A rare congenital condition in which vertebrae stay soft during the fetal stage, then compress and can fuse — producing a shortened back and the appearance of having no neck. It is best documented in dogs and much rarer in raccoons. Veterinarian Carrie Schneider assessed that Jimothy \"has a congenital spine shortening disease\"." }
+        },
+        {
+          "@type": "Question",
+          "name": "Where was Jimothy last seen?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sightings cluster in central Ballard — reports around Northwest 50th Street, the Ballard Goodwill and neighbouring backyards. The LAST VERIFIED SIGHTING figure at the top of this page is this engine's live answer: the most recent report that survived corroboration, resolved to a zone. He is a wild animal; sightings are unpredictable." }
+        },
+        {
+          "@type": "Question",
+          "name": "Has Jimothy been found?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. He has never been captured and roams free — he did not even appear at the July 26, 2026 \"Jimothy Summer\" celebration held in his honour. The Washington Department of Fish and Wildlife notes he appears fully capable of moving and feeding himself." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Jimothy healthy?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Experts believe so. Washington State University veterinarian Marcie Logsdon called him \"very spry\" and noted that having reached this age at all means he is managing his condition well." }
+        },
+        {
+          "@type": "Question",
+          "name": "What honours has Jimothy received?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Washingtonian of the Day from Governor Bob Ferguson (July 23, 2026), an official \"Jimothy Summer\" proclamation from Seattle City Council (July 26, 2026), an official bobblehead benefiting PAWS wildlife rescue, a Google Search easter egg, a Dungeons & Dragons stat block, and a letter from members of Congress demanding his protection." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I go to Ballard to see Jimothy?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Please don't. The Washington Department of Fish and Wildlife asks the public to leave him alone, and Seattle–King County health officials warn that wild raccoons can carry bacteria and parasites. Crowds are the single biggest threat to him — which is why this tracker resolves sightings to zones, never addresses, and never shows a live position." }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
 <a class="skip" href="#main">Skip to dashboard</a>
+
+<h1 class="sr-only">Jimothy Tracker — live sighting tracker for Jimothy, the short-spine raccoon of Ballard, Seattle</h1>
 
 <!-- Jakob's Law: a conventional app bar, exactly where people expect it. -->
 <header class="topbar">
@@ -229,6 +338,97 @@
 
 </main>
 
+<!-- Static, crawlable prose. The dashboard above is client-rendered from the
+     API, so this section is the only real text a crawler sees. Every claim
+     is sourced; the age dispute (born 2023 vs 2025) is deliberately omitted
+     because the sources disagree. -->
+<section class="about" id="about" aria-label="About Jimothy">
+  <div class="ainner">
+    <h2>WHO IS JIMOTHY?</h2>
+    <p><strong>Jimothy</strong> is a wild raccoon living in the <strong>Ballard</strong> neighbourhood of
+      <strong>Seattle, Washington</strong>, internet-famous for an unusually short, rounded body and the
+      appearance of having no neck — consistent, veterinarians say, with <strong>short spine
+      syndrome</strong>, a rare congenital condition in which vertebrae compress and can fuse. Seattle
+      resident Kiana Hall filmed him on an evening walk near the Ballard Goodwill and posted the video
+      on <strong>July 14, 2026</strong>; it went viral and has passed eight million views. She also named him:
+      <em>&ldquo;He just looked like a Jimothy to me.&rdquo;</em> Experts believe he is doing fine —
+      <em>&ldquo;the fact that he&rsquo;s made it to this age tells me that he&rsquo;s
+      managing&rdquo;</em>, said Washington State University veterinarian Marcie Logsdon.</p>
+    <p>The honours accumulated fast. On <strong>July 23, 2026</strong>, Governor Bob Ferguson named
+      Jimothy <strong>Washingtonian of the Day</strong>. On <strong>July 26</strong>, Seattle City
+      Councilmembers proclaimed the summer of 2026 <strong>&ldquo;Jimothy Summer&rdquo;</strong> at a
+      celebration in Ballard that hundreds of residents attended — and Jimothy, characteristically,
+      did not. On <strong>July 27</strong>, two members of Congress asked Seattle&rsquo;s mayor to protect
+      him — at all costs, as TMZ put it — and to stand up <em>sighting-report platforms and
+      databases</em> to track his movements and well-being. That is roughly what this page is: thirteen
+      live public sources — news, Reddit, Mastodon, iNaturalist, Seattle 311, Wikipedia attention,
+      weather, tides — plus Seattle&rsquo;s street cameras, normalised, corroborated and fused into one
+      honest dashboard.</p>
+    <p>He remains a free-roaming wild animal. Nobody — including this site — knows where he is right
+      now, and that is by design: the Washington Department of Fish and Wildlife asks the public to
+      leave him alone, so the tracker reports <strong>zones, never addresses</strong>, and will never
+      show a live position.</p>
+    <p>Read more:
+      <a href="https://en.wikipedia.org/wiki/Jimothy_(raccoon)" target="_blank" rel="noopener">Wikipedia</a> ·
+      <a href="https://www.seattletimes.com/seattle-news/meet-jimothy-seattles-internet-famous-raccoon/" target="_blank" rel="noopener">Seattle Times</a> ·
+      <a href="https://www.king5.com/article/news/local/governor-names-jimothy-washingtonian-of-the-day-seattle-raccoon/281-047dc68a-a790-4e64-abdb-023bb13612a0" target="_blank" rel="noopener">KING 5</a> ·
+      <a href="https://www.smithsonianmag.com/smart-news/an-unusual-looking-raccoon-nicknamed-jimothy-is-winning-hearts-across-the-internet-for-his-short-round-body-180989157/" target="_blank" rel="noopener">Smithsonian</a> ·
+      <a href="https://www.myballard.com/2026/07/16/jimothy-the-short-spined-raccoon-from-ballard-becomes-an-internet-sensation/" target="_blank" rel="noopener">MyBallard</a> ·
+      <a href="https://www.tmz.com/2026/07/27/jimothy-the-raccoon-gets-support-from-congress/" target="_blank" rel="noopener">TMZ</a></p>
+
+    <div class="faq">
+      <details>
+        <summary>Who is Jimothy the raccoon?</summary>
+        <p>Jimothy is a wild raccoon from Seattle&rsquo;s Ballard neighbourhood who went viral in July 2026
+          because of his unusually short, rounded body. He was filmed and named by Seattle resident
+          Kiana Hall, and has since been honoured by Washington&rsquo;s governor and the Seattle City
+          Council. His sex is actually unknown — &ldquo;he&rdquo; is used by convention.</p>
+      </details>
+      <details>
+        <summary>What is short spine syndrome?</summary>
+        <p>A rare congenital condition in which vertebrae stay soft during the fetal stage, then compress
+          and can fuse — producing a shortened back and the appearance of having no neck. It is best
+          documented in dogs and much rarer in raccoons. Veterinarian Carrie Schneider assessed that
+          Jimothy &ldquo;has a congenital spine shortening disease&rdquo;.</p>
+      </details>
+      <details>
+        <summary>Where was Jimothy last seen?</summary>
+        <p>Sightings cluster in central Ballard — reports around Northwest 50th Street, the Ballard
+          Goodwill and neighbouring backyards. The <strong>LAST VERIFIED SIGHTING</strong> figure at the
+          top of this page is this engine&rsquo;s live answer: the most recent report that survived
+          corroboration, resolved to a zone. He is a wild animal; sightings are unpredictable.</p>
+      </details>
+      <details>
+        <summary>Has Jimothy been found?</summary>
+        <p>No. He has never been captured and roams free — he did not even appear at the July 26, 2026
+          &ldquo;Jimothy Summer&rdquo; celebration held in his honour. The Washington Department of Fish
+          and Wildlife notes he appears fully capable of moving and feeding himself.</p>
+      </details>
+      <details>
+        <summary>Is Jimothy healthy?</summary>
+        <p>Experts believe so. Washington State University veterinarian Marcie Logsdon called him
+          &ldquo;very spry&rdquo; and noted that having reached this age at all means he is managing
+          his condition well.</p>
+      </details>
+      <details>
+        <summary>What honours has Jimothy received?</summary>
+        <p>Washingtonian of the Day from Governor Bob Ferguson (July 23, 2026), an official
+          &ldquo;Jimothy Summer&rdquo; proclamation from Seattle City Council (July 26, 2026), an
+          official bobblehead benefiting PAWS wildlife rescue, a Google Search easter egg, a
+          Dungeons&nbsp;&amp;&nbsp;Dragons stat block, and a letter from members of Congress demanding
+          his protection.</p>
+      </details>
+      <details>
+        <summary>Can I go to Ballard to see Jimothy?</summary>
+        <p>Please don&rsquo;t. The Washington Department of Fish and Wildlife asks the public to leave
+          him alone, and Seattle&ndash;King County health officials warn that wild raccoons can carry
+          bacteria and parasites. Crowds are the single biggest threat to him — which is why this
+          tracker resolves sightings to zones, never addresses, and never shows a live position.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
 <footer class="foot">
   <div class="fcol">
     <h3>METHOD</h3>
@@ -254,7 +454,8 @@
   </div>
   <div class="fbottom">
     Fan-made. Not affiliated with Jimothy or the City of Seattle.
-    Built by <a href="https://github.com/0xbl33p" target="_blank" rel="noopener">0xbl33p</a>.
+    Built by <a href="https://github.com/0xbl33p" target="_blank" rel="me noopener">0xbl33p</a>
+    (<a href="https://x.com/0xbl33p" target="_blank" rel="me noopener">@0xbl33p on X</a>).
     Google&nbsp;News · Bing&nbsp;News · Reddit · Mastodon · Bluesky&nbsp;(bridged) · MyBallard · X ·
     Wikipedia · iNaturalist · NWS · NOAA · Seattle&nbsp;Open&nbsp;Data · SDOT · YouTube.
   </div>

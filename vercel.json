@@ -4,6 +4,15 @@
   "buildCommand": null,
   "installCommand": null,
   "outputDirectory": "web",
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "jimothy-monitor.vercel.app" }],
+      "destination": "https://jimothytracker.xyz/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",

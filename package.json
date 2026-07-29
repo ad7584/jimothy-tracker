@@ -10,7 +10,8 @@
     "once": "node src/runner.mjs --once",
     "test": "node src/tools/privacy-test.mjs && node src/tools/render-test.mjs",
     "test:privacy": "node src/tools/privacy-test.mjs",
-    "test:render": "node src/tools/render-test.mjs"
+    "test:render": "node src/tools/render-test.mjs",
+    "smoke:tiktok": "node src/tools/tiktok-smoke.mjs"
   },
   "engines": {
     "node": ">=20"

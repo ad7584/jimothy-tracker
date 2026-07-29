@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jimothy Watch — Seattle's Most-Spotted Raccoon</title>
+<meta name="description" content="A community field log tracking sightings of Jimothy, Seattle's most-photographed trash panda.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --forest-deep: #16241b;
+    --forest-panel: #21332a;
+    --forest-panel-2: #2b4033;
+    --forest-panel-3: #1c2c23;
+    --cream: #f1e8d3;
+    --amber: #e8a33d;
+    --amber-dim: #b8792a;
+    --mask-black: #10160f;
+    --rust: #c2542f;
+    --line: rgba(241, 232, 211, 0.12);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--forest-deep);
+    color: var(--cream);
+    font-family: 'Inter', sans-serif;
+  }
+
+  a { color: inherit; }
+
+  /* ---------- Nav ---------- */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: rgba(22, 36, 27, 0.88);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .nav-logo {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.01em;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 26px;
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+
+  .nav-links a {
+    text-decoration: none;
+    color: rgba(241,232,211,0.75);
+    transition: color 0.15s ease;
+  }
+  .nav-links a:hover { color: var(--amber); }
+
+  .nav-cta {
+    background: var(--amber);
+    color: var(--mask-black);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+    font-family: 'Baloo 2', sans-serif;
+    white-space: nowrap;
+  }
+  .nav-cta:hover { background: var(--amber-dim); color: var(--cream); }
+
+  @media (max-width: 720px) {
+    .nav-links { display: none; }
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative;
+    padding: 90px 28px 70px;
+    text-align: center;
+    overflow: hidden;
+    background:
+      radial-gradient(500px 260px at 50% -10%, rgba(232,163,61,0.16), transparent),
+      radial-gradient(700px 400px at 90% 110%, rgba(43,64,51,0.5), transparent);
+  }
+
+  .hero-eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--amber);
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+
+  .hero h1 {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: clamp(38px, 7vw, 68px);
+    line-height: 1.02;
+    margin: 0 0 18px;
+  }
+
+  .hero h1 span { color: var(--amber); }
+
+  .hero p {
+    max-width: 560px;
+    margin: 0 auto 34px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(241,232,211,0.7);
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary, .btn-secondary {
+    padding: 13px 24px;
+    border-radius: 10px;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 14.5px;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-block;
+  }
+  .btn-primary { background: var(--amber); color: var(--mask-black); }
+  .btn-primary:hover { background: var(--amber-dim); color: var(--cream); }
+  .btn-secondary { background: transparent; color: var(--cream); border-color: var(--line); }
+  .btn-secondary:hover { border-color: var(--amber-dim); color: var(--amber); }
+
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 56px;
+    flex-wrap: wrap;
+  }
+
+  .hero-stat .num {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--amber);
+    display: block;
+  }
+  .hero-stat .lbl {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(241,232,211,0.55);
+  }
+
+  /* ---------- About ---------- */
+  .about {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 70px 28px;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 50px;
+    align-items: start;
+  }
+
+  @media (max-width: 780px) {
+    .about { grid-template-columns: 1fr; }
+  }
+
+  .section-eyebrow {
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--amber);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .about h2 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 30px;
+    margin: 0 0 16px;
+    font-weight: 800;
+  }
+
+  .about p {
+    color: rgba(241,232,211,0.72);
+    line-height: 1.7;
+    font-size: 15px;
+    margin: 0 0 14px;
+  }
+
+  .fact-card {
+    background: var(--forest-panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px;
+  }
+
+  .fact-card h3 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 15px;
+    margin: 0 0 14px;
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .fact-list { list-style: none; margin: 0; padding: 0; }
+  .fact-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  .fact-list li:last-child { border-bottom: none; }
+  .fact-list .k { color: rgba(241,232,211,0.55); }
+  .fact-list .v { font-weight: 600; color: var(--cream); }
+
+  /* ---------- Map section ---------- */
+  .map-section {
+    padding: 0 28px 80px;
+    max-width: 1240px;
+    margin: 0 auto;
+  }
+
+  .map-section-head {
+    text-align: center;
+    max-width: 560px;
+    margin: 0 auto 34px;
+  }
+
+  .map-section-head h2 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 30px;
+    margin: 10px 0 12px;
+    font-weight: 800;
+  }
+
+  .map-section-head p {
+    color: rgba(241,232,211,0.65);
+    font-size: 14.5px;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: 640px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,0.6);
+  }
+
+  @media (max-width: 780px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 280px 1fr; height: 720px; }
+  }
+
+  .sidebar {
+    background: var(--forest-panel);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .brand {
+    padding: 20px 20px 14px;
+    border-bottom: 1px solid var(--line);
+    background: radial-gradient(120px 60px at 90% -10%, rgba(232,163,61,0.18), transparent);
+  }
+
+  .brand .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--amber);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .brand h3 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 19px;
+    font-weight: 800;
+    margin: 0 0 4px;
+    line-height: 1.1;
+    color: var(--cream);
+  }
+
+  .brand p {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(241,232,211,0.6);
+    line-height: 1.4;
+  }
+
+  .count-row {
+    display: flex;
+    gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .count-chip {
+    background: var(--forest-panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+    flex: 1;
+  }
+
+  .count-chip .num {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--amber);
+    display: block;
+  }
+
+  .count-chip .lbl {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(241,232,211,0.6);
+  }
+
+  .hint {
+    padding: 12px 20px;
+    font-size: 11.5px;
+    color: rgba(241,232,211,0.5);
+    border-bottom: 1px solid var(--line);
+    line-height: 1.45;
+  }
+  .hint strong { color: var(--amber); font-weight: 600; }
+
+  .log { flex: 1; overflow-y: auto; padding: 10px 14px 20px; }
+
+  .log-empty {
+    text-align: center;
+    color: rgba(241,232,211,0.4);
+    font-size: 13px;
+    padding: 40px 10px;
+    line-height: 1.6;
+  }
+
+  .entry {
+    background: var(--forest-panel-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .entry:hover { border-color: var(--amber-dim); transform: translateX(2px); }
+
+  .entry-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .entry-title { font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 14px; color: var(--cream); }
+  .entry-date { font-size: 10px; color: var(--amber); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.04em; }
+  .entry-note { font-size: 12px; color: rgba(241,232,211,0.7); margin-top: 5px; line-height: 1.4; }
+  .entry-del { margin-top: 8px; background: none; border: none; color: rgba(194,84,47,0.85); font-size: 11px; cursor: pointer; padding: 0; font-family: 'Inter', sans-serif; }
+  .entry-del:hover { color: var(--rust); text-decoration: underline; }
+
+  #map { width: 100%; height: 100%; background: var(--forest-deep); }
+  .leaflet-container { background: var(--forest-deep); font-family: 'Inter', sans-serif; }
+  .leaflet-tile-pane { filter: invert(1) hue-rotate(175deg) brightness(0.95) contrast(0.9) saturate(0.7); }
+
+  .jimothy-pin {
+    width: 34px; height: 34px;
+    border-radius: 50% 50% 50% 4px;
+    background: var(--mask-black);
+    border: 2px solid var(--amber);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    transform: rotate(45deg);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+  }
+  .jimothy-pin span { transform: rotate(-45deg); }
+
+  .popup-form { font-family: 'Inter', sans-serif; min-width: 220px; }
+  .popup-form h3 { font-family: 'Baloo 2', sans-serif; margin: 0 0 8px; font-size: 16px; color: var(--mask-black); }
+  .popup-form label { display: block; font-size: 11px; font-weight: 600; color: #566; margin: 8px 0 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .popup-form input, .popup-form textarea { width: 100%; border: 1px solid #ccc; border-radius: 6px; padding: 6px 8px; font-family: 'Inter', sans-serif; font-size: 13px; resize: vertical; }
+  .popup-form button { margin-top: 10px; background: var(--amber); color: var(--mask-black); border: none; border-radius: 7px; padding: 7px 14px; font-weight: 700; font-size: 13px; cursor: pointer; width: 100%; font-family: 'Baloo 2', sans-serif; }
+  .popup-form button:hover { background: var(--amber-dim); color: var(--cream); }
+  .leaflet-popup-content-wrapper { border-radius: 12px; }
+
+  /* ---------- Footer ---------- */
+  .footer {
+    border-top: 1px solid var(--line);
+    padding: 30px 28px;
+    text-align: center;
+    font-size: 12.5px;
+    color: rgba(241,232,211,0.45);
+  }
+  .footer span { color: var(--amber); }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--forest-panel-2); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">🦝 Jimothy Watch</div>
+  <div class="nav-links">
+    <a href="#about">About Jimothy</a>
+    <a href="#map">Sightings Map</a>
+    <a href="#log">Field Log</a>
+  </div>
+  <a href="#map" class="nav-cta">Log a Sighting</a>
+</nav>
+
+<header class="hero">
+  <div class="hero-eyebrow">Community Cryptid Watch — Seattle, WA</div>
+  <h1>Where has <span>Jimothy</span><br>been spotted?</h1>
+  <p>Jimothy is Seattle's most-photographed raccoon — a nightly regular at compost bins, tree branches, and back-alley staring contests. This is the community log of everywhere he's turned up.</p>
+  <div class="hero-actions">
+    <a href="#map" class="btn-primary">Drop a pin</a>
+    <a href="#about" class="btn-secondary">Meet Jimothy</a>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat"><span class="num" id="hero-count">—</span><span class="lbl">Sightings logged</span></div>
+    <div class="hero-stat"><span class="num" id="hero-latest">—</span><span class="lbl">Most recent</span></div>
+    <div class="hero-stat"><span class="num">Seattle</span><span class="lbl">Home turf</span></div>
+  </div>
+</header>
+
+<section class="about" id="about">
+  <div>
+    <div class="section-eyebrow">Field Notes</div>
+    <h2>Who is Jimothy?</h2>
+    <p>Jimothy is a large, unbothered raccoon who has been sighted across Seattle neighborhoods at all hours, usually engaged in some form of light mischief — bin-raiding, tree-napping, or holding uncomfortably long eye contact with pedestrians.</p>
+    <p>Nobody's entirely sure if "Jimothy" is one raccoon or a title passed down through a whole raccoon lineage. What we do know is that sightings keep coming in, so this log exists to track them all in one place.</p>
+    <p>Spotted him? Scroll down to the map, click the exact spot, and add what he was up to.</p>
+  </div>
+  <div class="fact-card">
+    <h3>Known Behavior</h3>
+    <ul class="fact-list">
+      <li><span class="k">Preferred hours</span><span class="v">Dusk – 5am</span></li>
+      <li><span class="k">Known haunts</span><span class="v">Compost bins, trees</span></li>
+      <li><span class="k">Temperament</span><span class="v">Unbothered</span></li>
+      <li><span class="k">Status</span><span class="v">At large</span></li>
+    </ul>
+  </div>
+</section>
+
+<section class="map-section" id="map">
+  <div class="map-section-head">
+    <div class="section-eyebrow">Live Map</div>
+    <h2>Sightings across the city</h2>
+    <p>Click anywhere on the map to drop a pin and log what Jimothy was doing. Click a log entry to jump straight to its pin.</p>
+  </div>
+
+  <div class="app">
+    <div class="sidebar">
+      <div class="brand">
+        <div class="eyebrow">Cryptid Field Log</div>
+        <h3>Jimothy Sightings</h3>
+        <p>Every confirmed appearance, mapped.</p>
+      </div>
+      <div class="count-row">
+        <div class="count-chip">
+          <span class="num" id="stat-count">0</span>
+          <span class="lbl">Sightings</span>
+        </div>
+        <div class="count-chip">
+          <span class="num" id="stat-latest">—</span>
+          <span class="lbl">Most recent</span>
+        </div>
+      </div>
+      <div class="hint" id="storage-hint"><strong>Tap the map</strong> anywhere to drop a pin and log a sighting.</div>
+      <div class="log" id="log"></div>
+    </div>
+    <div id="mapCanvas"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  Built for the people of Seattle who keep running into <span>Jimothy</span>. Sightings are community-reported and unverified.
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(async function() {
+
+  // ---------- Backend config ----------
+  // Fill these in with your own free Supabase project (supabase.com) to
+  // get real cross-visitor syncing. Setup steps are in the README /
+  // chat instructions. Until you fill these in, the app falls back to
+  // this browser's localStorage only.
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+  const backendConfigured = SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20;
+  const supabase = backendConfigured
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  // ---------- Storage layer ----------
+  // Real backend: Supabase Postgres table, synced across every visitor.
+  // Fallback: browser localStorage, only visible in this browser.
+  const localAPI = {
+    async list() {
+      const out = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('jimothy:sighting:')) {
+          try { out.push(JSON.parse(localStorage.getItem(k))); } catch (e) {}
+        }
+      }
+      return out;
+    },
+    async save(entry) {
+      localStorage.setItem('jimothy:sighting:' + entry.id, JSON.stringify(entry));
+    },
+    async remove(id) {
+      localStorage.removeItem('jimothy:sighting:' + id);
+    }
+  };
+
+  const backendAPI = {
+    async list() {
+      const { data, error } = await supabase.from('sightings').select('*').order('date', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    async save(entry) {
+      const { error } = await supabase.from('sightings').upsert(entry);
+      if (error) throw error;
+    },
+    async remove(id) {
+      const { error } = await supabase.from('sightings').delete().eq('id', id);
+      if (error) throw error;
+    }
+  };
+
+  const storageAPI = backendConfigured ? backendAPI : localAPI;
+
+  // ---------- Identity ----------
+  // Delete is restricted to "your own" entries. With the backend, that
+  // means a real (anonymous, no-signup) Supabase auth session -- the
+  // server enforces it via row-level security, so it can't be spoofed
+  // from the browser. Without a backend, it falls back to a random id
+  // stored in this browser only.
+  function getDeviceId() {
+    let id = localStorage.getItem('jimothy:deviceId');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : 'dev_' + Date.now() + '_' + Math.random().toString(36).slice(2));
+      localStorage.setItem('jimothy:deviceId', id);
+    }
+    return id;
+  }
+
+  let currentUserId = null;
+  if (backendConfigured) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && session.user) {
+        currentUserId = session.user.id;
+      } else {
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (error) throw error;
+        currentUserId = data.user.id;
+      }
+    } catch (e) {
+      console.error('Anonymous sign-in failed, delete-your-own will be unavailable:', e);
+    }
+  } else {
+    currentUserId = getDeviceId();
+  }
+
+  document.getElementById('storage-hint').innerHTML = backendConfigured
+    ? '<strong>Tap the map</strong> anywhere to drop a pin. Synced live \u2014 everyone visiting this site sees the same sightings. You can only delete sightings you added yourself.'
+    : '<strong>Tap the map</strong> anywhere to drop a pin. Backend isn\u2019t connected yet, so sightings are only saved in this browser \u2014 see setup instructions to enable real syncing.';
+
+  // Live updates from other visitors, if backend is connected.
+  if (backendConfigured) {
+    supabase
+      .channel('sightings-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sightings' }, () => {
+        loadSightings();
+      })
+      .subscribe();
+  }
+
+  // ---------- Map setup ----------
+  const SEATTLE = [47.6062, -122.3321];
+  let sightings = [];
+  let markers = {};
+
+  const map = L.map('mapCanvas', { zoomControl: true }).setView(SEATTLE, 12);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  setTimeout(() => map.invalidateSize(), 100);
+  window.addEventListener('resize', () => map.invalidateSize());
+
+  function pinIcon() {
+    return L.divIcon({
+      className: '',
+      html: '<div class="jimothy-pin"><span>🦝</span></div>',
+      iconSize: [34, 34],
+      iconAnchor: [17, 30],
+      popupAnchor: [0, -28]
+    });
+  }
+
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  const SEED_SIGHTINGS = [
+    { id: 'seed_1', title: 'Raiding a compost bin', note: 'Caught red-pawed going through someone\'s backyard compost at dusk.', date: '2026-07-10T02:30:00.000Z', lat: 47.6205, lng: -122.3493 },
+    { id: 'seed_2', title: 'Napping in a tree', note: 'Spotted sprawled across a branch near the locks, unbothered by tourists.', date: '2026-07-12T05:15:00.000Z', lat: 47.6654, lng: -122.3966 },
+    { id: 'seed_3', title: 'Crossing the trail at dawn', note: 'Waddled right across the path near the reservoir.', date: '2026-07-15T13:00:00.000Z', lat: 47.6298, lng: -122.3141 },
+    { id: 'seed_4', title: 'Staring contest under the bridge', note: 'Held eye contact for an uncomfortably long time.', date: '2026-07-16T04:45:00.000Z', lat: 47.6510, lng: -122.3508 }
+  ];
+
+  async function saveSighting(entry) {
+    if (!entry.owner_id) entry.owner_id = currentUserId;
+    await storageAPI.save(entry);
+  }
+
+  async function deleteSighting(id) {
+    const entry = sightings.find(s => s.id === id);
+    if (!entry || entry.owner_id !== currentUserId) return;
+    try {
+      await storageAPI.remove(id);
+    } catch (e) {
+      console.error('Delete failed (likely not the owner):', e);
+      return;
+    }
+    sightings = sightings.filter(s => s.id !== id);
+    if (markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+    renderAll();
+  }
+
+  let seeding = false;
+
+  async function loadSightings() {
+    try {
+      let loaded = await storageAPI.list();
+      if (loaded.length === 0 && !seeding) {
+        seeding = true;
+        for (const seed of SEED_SIGHTINGS) {
+          await saveSighting(seed);
+        }
+        loaded = await storageAPI.list();
+        seeding = false;
+      }
+      loaded.sort((a, b) => new Date(b.date) - new Date(a.date));
+      sightings = loaded;
+    } catch (e) {
+      console.error('Failed to load sightings:', e);
+      sightings = SEED_SIGHTINGS.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+    renderAll();
+  }
+
+  function renderStats() {
+    const count = sightings.length;
+    const latest = count ? fmtDate(sightings[0].date) : '—';
+    document.getElementById('stat-count').textContent = count;
+    document.getElementById('stat-latest').textContent = latest;
+    document.getElementById('hero-count').textContent = count;
+    document.getElementById('hero-latest').textContent = latest;
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function renderLog() {
+    const log = document.getElementById('log');
+    if (!sightings.length) {
+      log.innerHTML = '<div class="log-empty">No sightings logged yet.<br>Be the first to spot Jimothy 🦝</div>';
+      return;
+    }
+    log.innerHTML = '';
+    sightings.forEach(s => {
+      const el = document.createElement('div');
+      el.className = 'entry';
+      const isOwner = s.owner_id === currentUserId;
+      el.innerHTML = `
+        <div class="entry-top">
+          <span class="entry-title">${escapeHtml(s.title || 'Jimothy sighting')}</span>
+          <span class="entry-date">${fmtDate(s.date)}</span>
+        </div>
+        ${s.note ? `<div class="entry-note">${escapeHtml(s.note)}</div>` : ''}
+        ${isOwner ? `<button class="entry-del" data-id="${s.id}">Remove</button>` : ''}
+      `;
+      el.addEventListener('click', (e) => {
+        if (e.target.classList.contains('entry-del')) return;
+        map.setView([s.lat, s.lng], 15, { animate: true });
+        if (markers[s.id]) markers[s.id].openPopup();
+      });
+      const delBtn = el.querySelector('.entry-del');
+      if (delBtn) {
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteSighting(s.id);
+        });
+      }
+      log.appendChild(el);
+    });
+  }
+
+  function addMarker(entry) {
+    const marker = L.marker([entry.lat, entry.lng], { icon: pinIcon() }).addTo(map);
+    marker.bindPopup(`
+      <div class="popup-form">
+        <h3>${escapeHtml(entry.title || 'Jimothy sighting')}</h3>
+        <div style="font-size:12px;color:#567;margin-bottom:4px;">${fmtDate(entry.date)}</div>
+        ${entry.note ? `<div style="font-size:13px;color:#334;">${escapeHtml(entry.note)}</div>` : ''}
+      </div>
+    `);
+    markers[entry.id] = marker;
+  }
+
+  function renderAll() {
+    Object.values(markers).forEach(m => map.removeLayer(m));
+    markers = {};
+    sightings.forEach(addMarker);
+    renderStats();
+    renderLog();
+  }
+
+  function openNewSightingPopup(latlng) {
+    const formId = 'form-' + Date.now();
+    L.popup({ closeOnClick: false, autoClose: true })
+      .setLatLng(latlng)
+      .setContent(`
+        <div class="popup-form">
+          <h3>Log a sighting</h3>
+          <label for="${formId}-title">What was Jimothy doing?</label>
+          <input id="${formId}-title" type="text" placeholder="Raiding a compost bin" />
+          <label for="${formId}-note">Notes</label>
+          <textarea id="${formId}-note" rows="2" placeholder="Optional details"></textarea>
+          <button id="${formId}-save">Drop pin</button>
+        </div>
+      `)
+      .openOn(map);
+
+    setTimeout(() => {
+      const btn = document.getElementById(formId + '-save');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const title = document.getElementById(formId + '-title').value.trim();
+        const note = document.getElementById(formId + '-note').value.trim();
+        const entry = {
+          id: 'sight_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          title: title || 'Jimothy sighting',
+          note: note,
+          date: new Date().toISOString(),
+          lat: latlng.lat,
+          lng: latlng.lng
+        };
+        sightings.unshift(entry);
+        await saveSighting(entry);
+        map.closePopup();
+        renderAll();
+      });
+    }, 0);
+  }
+
+  map.on('click', (e) => openNewSightingPopup(e.latlng));
+
+  await loadSightings();
+})();
+</script>
+
+</body>
+</html>

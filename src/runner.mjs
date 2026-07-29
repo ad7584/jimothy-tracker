@@ -12,6 +12,13 @@ import { Server } from "./server.mjs";
 import { INTERVALS, PORT, FEED_PER_PLATFORM, FEED_MAX } from "./config.mjs";
 import { feedSources, readRedditComments } from "./sources/feeds.mjs";
 import { mastodonSource, harvestTweetIds, hydrateTweet } from "./sources/social.mjs";
+import { tiktokSource, queueTikTokUrls, initTikTokCache, getThumb, hasThumb, ensureThumb } from "./sources/tiktok.mjs";
+import { TIKTOK } from "./config.mjs";
+
+// Guards against two overlapping recomputes paying for the same poster frame —
+// the schedule interleaves at await points, and the TikTok queue is walked in
+// deterministic order, which makes that collision likely rather than freak.
+const ttInFlight = new Set();
 import { inaturalistSource } from "./sources/wildlife.mjs";
 import { fetchWikipedia, fetchConditions, fetchCivic } from "./sources/signals.mjs";
 import { extract } from "./engine/extract.mjs";
@@ -29,7 +36,7 @@ import * as ops from "./engine/ops.mjs";
 
 const ONCE = process.argv.includes("--once");
 
-const ITEM_SOURCES = [...feedSources, mastodonSource, inaturalistSource];
+const ITEM_SOURCES = [...feedSources, mastodonSource, inaturalistSource, tiktokSource];
 
 const state = {
   startedAt: Date.now(),
@@ -45,6 +52,7 @@ const state = {
   platforms: [],
   stories: [],
   cams: null,
+  tiktok: [],
   recognition: [],
   vision: recog.status(),
   conditions: null,
@@ -106,6 +114,17 @@ async function hydrateX(fresh) {
     console.log(`[ingest] x: +${out.length} hydrated`);
   }
   return out;
+}
+
+/**
+ * Queue any TikTok links found in freshly ingested text (including freshly
+ * hydrated tweets — the recent sightings travelled TikTok → X). Queued URLs
+ * are hydrated on the tiktok source's own cycle, against its own budget.
+ */
+function harvestTikTok(fresh) {
+  let n = 0;
+  for (const it of fresh) n += queueTikTokUrls(`${it.text} ${it.url}`);
+  if (n) console.log(`[tiktok] queued ${n} link(s) from other sources`);
 }
 
 async function runSignals() {
@@ -184,7 +203,10 @@ async function recompute() {
     ops.opGeo(p.zone, p.precision, p.matched);
     if (geoSeen.size >= 4) break;
   }
-  state.totals.jimothyMentions = chatter.length;
+  // "Mentions" means the text actually mentions him. A TikTok found via a
+  // Jimothy search whose caption never says the name is on the board, but it
+  // is not a mention and must not inflate the headline count.
+  state.totals.jimothyMentions = chatter.filter((c) => !c.ex.foundViaSearch).length;
   state.totals.located = chatter.filter((c) => c.ex.places?.length).length;
   state.totals.observations = observed.length;
   state.totals.baseline = baseline.length;
@@ -223,14 +245,37 @@ async function recompute() {
     console.warn(`[camtape] ${e.message}`);
   }
 
+  // TikTok verdict re-attach runs UNCONDITIONALLY — with vision disabled, a
+  // verdict paid for last week must still reach the corroboration engine and
+  // the panel. BUDGET_CAPPED and UNSCORED are queue states, not verdicts
+  // (neither was ever charged), so they stay eligible for scoring below.
+  const ttUnscored = [];
+  {
+    const ttQueue = chatter
+      .filter((c) => c.item.origin === "tiktok" && c.item.meta?.tiktokId)
+      .sort((a, b) => (b.item.ts || b.item.fetchedAt || 0) - (a.item.ts || a.item.fetchedAt || 0));
+    for (const c of ttQueue) {
+      const key = `/api/tikthumb/${c.item.meta.tiktokId}`;
+      const prior = state.recognition.find((r) => r.imageUrl === key);
+      if (prior && prior.status !== "BUDGET_CAPPED" && prior.status !== "UNSCORED") {
+        c.recognition = [...(c.recognition || []), prior];
+        continue;
+      }
+      ttUnscored.push({ c, key, prior });
+    }
+  }
+
   // Recognition on the highest-value images first: wildlife observations carry
   // GPS, so a hit there is a located event.
   if (recog.enabled) {
     // Observed-with-GPS first: a hit there is a located, dated event. Baseline
     // observations are excluded entirely — scoring raccoons 8km away burns
     // tokens for nothing.
+    // TikTok is excluded here: its images[] URL is signed and expiring, so its
+    // frames are scored from the local cache in the dedicated block below —
+    // letting both paths run would pay twice for the same poster frame.
     const queue = [...observed, ...chatter]
-      .filter((c) => c.ex.needsRecognition)
+      .filter((c) => c.ex.needsRecognition && c.item.origin !== "tiktok")
       .slice(0, 6);
     // The cache is persisted, so an image is never paid for twice — not across
     // cycles and not across restarts.
@@ -281,12 +326,95 @@ async function recompute() {
       console.warn(`[camwatch] ${e.message}`);
     }
 
-    state.recognition = state.recognition.slice(0, 500);
+    // TikTok poster frames, from the LOCAL cache — never the signed CDN URL,
+    // which is already counting down its ~48h expiry by the time we get here.
+    // The cached bytes are the only copy guaranteed to still exist on a later
+    // pass (UNSCORED backlog, budget cap, restart).
+    try {
+      // Fresh videos only. When a vision key first appears after weeks of
+      // keyless accumulation, the backlog must not burn the daily budget on
+      // months-old videos four at a time.
+      const ttCutoff = Date.now() - 14 * 86400_000;
+      let ttScored = 0;
+      for (const { c, key, prior } of ttUnscored) {
+        if (ttScored >= TIKTOK.maxScorePerCycle) break;
+        if (recog.remainingToday() <= 0) break;
+        if ((c.item.ts || c.item.fetchedAt || 0) < ttCutoff) continue;
+        // Overlapping recomputes both walk this queue newest-first; without
+        // the in-flight guard they would deterministically pick the same
+        // frame and pay for it twice.
+        if (ttInFlight.has(key)) continue;
+        ttInFlight.add(key);
+        try {
+          let thumb = await getThumb(c.item.meta.tiktokId);
+          if (!thumb && await ensureThumb(c.item.meta.tiktokId, c.item.meta.thumbnailUrl, c.item.fetchedAt)) {
+            thumb = await getThumb(c.item.meta.tiktokId); // recovered late — see ensureThumb
+          }
+          if (!thumb) continue;
+          const r = await recog.recogniseBuffer(thumb.buf, thumb.type, key);
+          r.itemUrl = c.item.url;
+          r.itemSource = c.item.source;
+          r.zone = c.ex.places?.[0]?.zone || null;
+          // A superseded queue-state entry (BUDGET_CAPPED/UNSCORED) makes way
+          // for the real verdict rather than shadowing it in the cache.
+          if (prior) state.recognition = state.recognition.filter((x) => x !== prior);
+          state.recognition.unshift(r);
+          scoredThisCycle++;
+          ttScored++;
+          c.recognition = [...(c.recognition || []), r];
+          if (r.status === "CONSISTENT_WITH_JIMOTHY") {
+            ops.opHit(`*** TIKTOK HIT ${c.item.source} — ${r.reasoning}`, { url: c.item.url });
+            console.log(`[!] TIKTOK HIT: ${c.item.url} — ${r.reasoning}`);
+          }
+        } finally {
+          ttInFlight.delete(key);
+        }
+      }
+    } catch (e) {
+      console.warn(`[tiktok] recognition: ${e.message}`);
+    }
+
+    // Cap the cache WITHOUT evicting paid TikTok verdicts — eviction is what
+    // turns "never pay twice" into "pay again next week", because the prior
+    // lookup above reads this same array. Camera frames dominate the general
+    // pool and can push 500 entries in days; 150 TikTok verdicts is roughly
+    // two months of retention at the observed 2-3 videos/day.
+    const isTT = (r) => String(r.imageUrl || "").startsWith("/api/tikthumb/");
+    const ttKeep = new Set(state.recognition.filter(isTT).slice(0, 150));
+    let ttOthers = 0;
+    state.recognition = state.recognition.filter((r) =>
+      isTT(r) ? ttKeep.has(r) : ++ttOthers <= 500);
     state.visionSpend = { usedToday: recog.usedToday(), remainingToday: recog.remainingToday() };
     if (scoredThisCycle) await store.saveRecognition(state.recognition, recog.getSpend(), getFrameSpend());
   } else {
     state.vision = recog.status();
   }
+
+  // TikTok panel data: newest videos with cached poster and verdict. Verdicts
+  // are looked up from the persisted recognition cache on every pass, so this
+  // renders correctly with vision off (UNSCORED) and across restarts.
+  state.tiktok = chatter
+    .filter((c) => c.item.origin === "tiktok" && c.item.meta?.tiktokId)
+    .sort((a, b) => (b.item.ts || b.item.fetchedAt || 0) - (a.item.ts || a.item.fetchedAt || 0))
+    .slice(0, 40)
+    .map((c) => {
+      const id = c.item.meta.tiktokId;
+      const r = state.recognition.find((x) => x.imageUrl === `/api/tikthumb/${id}`);
+      return {
+        id,
+        author: c.item.meta.author || null,
+        title: c.item.title,
+        url: c.item.url,
+        ts: c.item.ts || c.item.fetchedAt,
+        zone: c.ex.places?.[0]?.zone || null,
+        band: c.ex.band,
+        score: Number(c.ex.score.toFixed(3)),
+        thumb: hasThumb(id) ? `/api/tikthumb/${id}` : null,
+        recognition: r
+          ? { status: r.status, confidence: r.confidence, reasoning: r.reasoning, model: r.model }
+          : null,
+      };
+    });
 
   // Clusters may include real Ballard observations, never the wider baseline.
   state.clusters = cluster([...chatter, ...observed]);
@@ -382,7 +510,8 @@ function schedule(fn, intervalMs, label) {
 async function fullCycle() {
   const fresh = [];
   for (const src of ITEM_SOURCES) fresh.push(...(await runItemSource(src)));
-  await hydrateX(fresh);
+  const tweets = await hydrateX(fresh);
+  harvestTikTok([...fresh, ...tweets]);
   await runSignals();
   await recompute();
   await store.saveState(state);
@@ -416,6 +545,9 @@ function report() {
   console.log(ls?.found
     ? `    ${ls.band} · ${ls.zone} · ${(ls.ageMs / 3.6e6).toFixed(1)}h ago · ${ls.originCount} independent origins`
     : `    ${ls?.note || "none"}`);
+  console.log(`\n  TIKTOK     ${(s.tiktok || []).length} videos on the board` +
+    ` · ${(s.tiktok || []).filter((t) => t.recognition?.status === "CONSISTENT_WITH_JIMOTHY").length} consistent with Jimothy` +
+    ` · ${(s.tiktok || []).filter((t) => !t.recognition).length} unscored`);
   console.log(`\n  VISION     ${s.vision.enabled ? `${s.vision.provider} · ${s.vision.idModel}` : "disabled (no API key) — images queued UNSCORED"}`);
   if (s.camWatch) {
     const w = s.camWatch;
@@ -428,6 +560,8 @@ function report() {
 
 // --- Boot -----------------------------------------------------------------
 await store.init();
+const cachedThumbs = await initTikTokCache();
+if (cachedThumbs) console.log(`[boot] ${cachedThumbs} TikTok poster frame(s) already cached`);
 const cached = await store.loadRecognition();
 state.recognition = cached.results;
 recog.loadSpend(cached.spend);
@@ -452,7 +586,8 @@ for (const src of ITEM_SOURCES) {
   const iv = INTERVALS[src.id] ?? INTERVALS.news;
   schedule(async () => {
     const fresh = await runItemSource(src);
-    await hydrateX(fresh);
+    const tweets = await hydrateX(fresh);
+    harvestTikTok([...fresh, ...tweets]);
     await recompute();
     await store.saveState(state);
     server.publish(state);

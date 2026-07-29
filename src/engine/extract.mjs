@@ -105,7 +105,12 @@ export function extract(item, extraText = "") {
   const t = norm(raw);
   const why = [];
 
-  if (!/jimothy/.test(t) && item.origin !== "wildlife") return null;
+  // TikTok items were DISCOVERED via Jimothy searches, but the caption itself
+  // often carries no name at all ("look at this little guy") — so they pass
+  // the gate on provenance and are scored honestly below: a caption that says
+  // "jimothy" earns the mention weight, one that does not earns a smaller
+  // found-via-search weight instead.
+  if (!/jimothy/.test(t) && item.origin !== "wildlife" && item.origin !== "tiktok") return null;
 
   // Speculative-asset chatter never enters the pipeline. Checked with word
   // boundaries so "tickertape" or a street called Wallet Lane cannot trip it,
@@ -138,8 +143,17 @@ export function extract(item, extraText = "") {
     };
   }
 
-  let score = 0.12;
-  why.push({ k: "mentions-jimothy", w: 0.12 });
+  let score;
+  const foundViaSearch = !/jimothy/.test(t);
+  if (!foundViaSearch) {
+    score = 0.12;
+    why.push({ k: "mentions-jimothy", w: 0.12 });
+  } else {
+    // Only reachable for tiktok items (see the gate above): the video was
+    // found through a Jimothy search, but its own caption never says the name.
+    score = 0.08;
+    why.push({ k: "found-via-jimothy-search", w: 0.08 });
+  }
 
   const verbs = SIGHTING_VERBS.filter((v) => t.includes(v));
   if (verbs.length) {
@@ -201,6 +215,16 @@ export function extract(item, extraText = "") {
     why.push({ k: `off-territory-claim:${decoys.slice(0, 2).join(",")}`, w });
   }
 
+  // A TikTok whose caption never mentions Jimothy — or even a raccoon — is too
+  // weakly tied to the animal for its place names to count as evidence: a
+  // Storm-mascot edit that name-drops a Ballard bar must never reach heat,
+  // territory or a corroboration cluster. It stays in the feed; it loses
+  // location credit. Same principle, same mechanism as the decoy rule above.
+  if (foundViaSearch && places.length && !/racc?oon|trash\s?panda/.test(t)) {
+    places = [];
+    why.push({ k: "no-name-no-location-credit", w: 0 });
+  }
+
   if (places.length) {
     const best = places[0];
     // `street` used to be `grid` and used to be the biggest single weight in
@@ -232,6 +256,7 @@ export function extract(item, extraText = "") {
     band: bandFor(score),
     why,
     places,
+    foundViaSearch,
     offTerritory,
     ironic: irony.length > 0,
     coordinatesRedacted: redaction.redacted,

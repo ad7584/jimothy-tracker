@@ -31,6 +31,18 @@ export const INTERVALS = {
   seattle311: 3_600_000,
   wikipedia: 3_600_000,
   inaturalist: 3_600_000,
+  tiktok: 300_000,      // Bluesky discovery + oEmbed hydration, both keyless
+};
+
+// TikTok ingest. Discovery is Bluesky searchPosts (domain=tiktok.com) plus a
+// regex harvest over everything already ingested; hydration is the official
+// keyless oEmbed endpoint. All bounds exist so a viral surge degrades to
+// "catches up over a few cycles" rather than "hammers TikTok from one IP".
+export const TIKTOK = {
+  maxHydratePerCycle: Number(process.env.JM_TIKTOK_PER_CYCLE || 8),
+  maxPending: 200,        // queued URLs from other sources, cap before drop
+  maxThumbs: 200,         // cached poster frames on disk (~10-60KB each)
+  maxScorePerCycle: 4,    // vision passes per cycle — shares the daily cap
 };
 
 // Reddit rate-limits hard and the limit is account-less and IP-wide, so it

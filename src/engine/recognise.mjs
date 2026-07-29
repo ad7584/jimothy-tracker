@@ -253,6 +253,29 @@ export async function recogniseFrame(frame) {
   return scoreImage(img, base, STREET_TRIAGE_PROMPT);
 }
 
+/**
+ * Score an image we already hold as bytes — used for TikTok poster frames,
+ * whose signed CDN URLs expire ~48h after issuance. The cached copy is the
+ * only version guaranteed to still exist when the spend guard lets us score.
+ * `imageUrl` is the stable cache path (e.g. /api/tikthumb/<id>): it is the
+ * dedupe key in the recognition cache AND what the dashboard renders.
+ */
+export async function recogniseBuffer(buffer, mediaType, imageUrl) {
+  const base = { imageUrl, checkedAt: Date.now(), raccoon: null, consistent: null,
+    confidence: null, reasoning: null, model: null, kind: "photo" };
+  if (!enabled) return { ...base, status: "UNSCORED", reasoning: "no vision API key configured" };
+  if (remainingToday() <= 0) {
+    return { ...base, status: "BUDGET_CAPPED",
+      reasoning: `daily cap of ${VISION.maxImagesPerDay} images reached; resumes 00:00 UTC` };
+  }
+  if (!buffer || buffer.byteLength > VISION.maxBytes) {
+    return { ...base, status: "ERROR", reasoning: "image missing or too large" };
+  }
+  chargeOne();
+  const img = { base64: buffer.toString("base64"), mediaType: mediaType || "image/jpeg" };
+  return scoreImage(img, base, TRIAGE_PROMPT);
+}
+
 /** Score a batch, bounded per cycle so a burst cannot run up a bill. */
 export async function recogniseBatch(imageUrls, limit = VISION.maxImagesPerCycle) {
   const urls = [...new Set(imageUrls)].slice(0, limit);

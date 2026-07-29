@@ -95,7 +95,10 @@ export async function loadRecognition() {
 }
 
 export async function saveRecognition(results, spend, frameSpend = {}) {
-  await writeFile(RECOG(), JSON.stringify({ results: results.slice(0, 500), spend, frameSpend }), "utf8");
+  // 700, not 500: the runner's cap now retains up to 150 TikTok verdicts ON
+  // TOP of the general 500 — truncating here would silently undo that and
+  // re-open the pay-twice hole the retention exists to close.
+  await writeFile(RECOG(), JSON.stringify({ results: results.slice(0, 700), spend, frameSpend }), "utf8");
 }
 
 export async function saveState(state) {

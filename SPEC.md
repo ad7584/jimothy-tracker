@@ -65,6 +65,7 @@ the system can produce.
 | MyBallard.com RSS | ✅ | 2 items, both relevant | **Highest signal-to-noise.** Hyperlocal Ballard blog |
 | X (`cdn.syndication.twimg.com/tweet-result`) | ✅ | hydrate-by-ID only | **Works** — re-verified 2026-07-26, 200 with full text, timestamps and media. Still **cannot search**, so it is only as good as the URLs harvested elsewhere |
 | Bluesky `api.bsky.app` searchPosts | ✅ | ~0.6 posts/min | ⚠️ **Previously recorded as 403 — that was the wrong hostname.** `public.api.bsky.app` is CDN-blocked; `api.bsky.app` returns 200. Token bucket ≈10 calls recovering ~15s, so serialise |
+| TikTok (`www.tiktok.com/oembed` hydrate-by-URL) | ✅ | ~2-3 videos/day | **Cannot be searched keylessly** — search/tag pages are empty shells behind signed XHR (verified 2026-07-29). Discovery = Bluesky `searchPosts?q=jimothy&domain=tiktok.com` (25/25 posts carried links) + regex harvest over all ingested text. oEmbed is official, keyless, accepts `/t/` short links, 400s on dead videos. `thumbnail_url` is signed, **expires ~48h** — bytes cached to `data/tikthumbs/` at ingest. `id >> 32` = unix creation seconds. Dashboard playback via `embed/v2/<id>` iframe (no X-Frame-Options, verified). ⚠️ All verification was from a residential IP — run `npm run smoke:tiktok` from Railway after deploy |
 | Wikipedia pageviews REST | ✅ | daily | Attention curve: 46 → 677 → 8,965 → 24,148/day |
 
 ### Environment (governs raccoon behaviour)

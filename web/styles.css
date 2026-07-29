@@ -208,6 +208,7 @@ h2{font-family:var(--mono); font-size:12px; letter-spacing:.18em; font-weight:60
 .panel-prox  {grid-column:9 / span 4}
 .panel-health{grid-column:1 / span 6}
 .panel-ops   {grid-column:7 / span 6}
+.panel-tiktok{grid-column:1 / span 12}
 .phead{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px}
 .tag{font-family:var(--mono); font-size:12.5px; color:var(--dim)}
 /* One short line, never a paragraph. */
@@ -616,6 +617,38 @@ h2{font-family:var(--mono); font-size:12px; letter-spacing:.18em; font-weight:60
   border-bottom:1px solid #182129; line-height:1.6}
 .doslink:last-child{border-bottom:0}
 
+/* ── tiktok ─────────────────────────────────────────────────────────── */
+/* A horizontal shelf of portrait cards — the shape people already scroll on
+   the platform itself (Jakob's Law). Nothing embeds until pressed: each
+   TikTok iframe is ~300KB of third-party assets, so the reader chooses. */
+.ttrow{display:grid; grid-auto-flow:column; grid-auto-columns:196px; gap:12px;
+  overflow-x:auto; padding:4px 2px 12px; scrollbar-width:thin}
+.ttcard{display:flex; flex-direction:column; gap:7px; min-width:0}
+.ttthumb{position:relative; aspect-ratio:9/16; width:100%; border:1px solid var(--line2);
+  border-radius:5px; overflow:hidden; background:#0c1218; cursor:pointer; padding:0}
+.ttthumb img{width:100%; height:100%; object-fit:cover; display:block}
+.ttthumb iframe{width:100%; height:100%; border:0; display:block; background:#000}
+.ttplay{position:absolute; inset:0; display:grid; place-items:center; font-size:26px;
+  color:#fff; text-shadow:0 1px 8px rgba(0,0,0,.8); opacity:.85; transition:opacity .2s}
+.ttthumb:hover .ttplay{opacity:1}
+.ttthumb.playing .ttplay{display:none}
+.ttbadge{position:absolute; top:7px; left:7px; font-family:var(--mono);
+  font-size:9.5px; letter-spacing:.09em; padding:3px 7px; border-radius:3px; z-index:1}
+.ttclose{position:absolute; top:7px; right:7px; z-index:2; font-family:var(--mono);
+  font-size:12px; line-height:1; padding:6px 8px; border-radius:3px; cursor:pointer;
+  background:rgba(10,14,18,.85); color:var(--text2); border:1px solid var(--line2)}
+.ttclose:hover{color:var(--bad); border-color:var(--bad)}
+.tts-hit{background:var(--bad); color:#170404; font-weight:700}
+.tts-no{background:rgba(10,14,18,.82); color:var(--dim); border:1px solid var(--line2)}
+.tts-wait{background:rgba(10,14,18,.82); color:var(--accent); border:1px solid #54430f}
+.ttmeta{font-family:var(--mono); font-size:11.5px; color:var(--dimmer); line-height:1.5}
+.ttmeta b{color:var(--text2); font-weight:600}
+.ttmeta a{color:var(--dim)}
+.tttitle{font-size:12.5px; line-height:1.45; color:var(--text2); display:-webkit-box;
+  -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.ttwhy{font-family:var(--mono); font-size:11px; color:var(--dimmer); line-height:1.5;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+
 /* ── responsive ─────────────────────────────────────────────────────── */
 @media (max-width:1300px){
   .hero{grid-template-columns:1fr 1fr}
@@ -668,6 +701,7 @@ h2{font-family:var(--mono); font-size:12px; letter-spacing:.18em; font-weight:60
   .panel-feed{max-height:none}               /* let the page scroll, not a box */
   .feed{max-height:520px}
   .zones,.recog,.leads,.ledger{max-height:340px}
+  .ttrow{grid-auto-columns:158px}
   /* Two across on a phone still shows every camera without a tap. */
   .camgrid{grid-template-columns:repeat(2,1fr)}
 

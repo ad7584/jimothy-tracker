@@ -105,14 +105,14 @@ if (!state) {
 let render;
 try {
   // eslint-disable-next-line no-new-func
-  const fn = new Function(`${js}\nreturn { render, renderEnv, renderAttention, renderLeads, renderLedger, renderCams, renderFeed, renderHealth, renderZones, renderRecognition, renderGauge, renderChips, renderTicker };`);
+  const fn = new Function(`${js}\nreturn { render, renderEnv, renderAttention, renderLeads, renderLedger, renderCams, renderFeed, renderHealth, renderZones, renderRecognition, renderGauge, renderChips, renderTicker, renderTikTok };`);
   const api = fn();
   render = api.render;
   console.log("app.js loaded and top-level init ran");
 
   const panels = ["renderEnv", "renderAttention", "renderLeads", "renderLedger",
                   "renderCams", "renderFeed", "renderZones", "renderRecognition",
-                  "renderHealth", "renderChips", "renderTicker"];
+                  "renderHealth", "renderChips", "renderTicker", "renderTikTok"];
   let ok = 0;
   for (const name of panels) {
     try { api[name](state); ok++; console.log(`  PASS  ${name}`); }

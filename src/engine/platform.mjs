@@ -8,6 +8,7 @@ const PLATFORMS = {
   reddit:    { key: "reddit",    label: "Reddit",      colour: "#ff5c31" },
   mastodon:  { key: "mastodon",  label: "Mastodon",    colour: "#7b6ef6" },
   bluesky:   { key: "bluesky",   label: "Bluesky",     colour: "#3b9cf5" },
+  tiktok:    { key: "tiktok",    label: "TikTok",      colour: "#69c9d0" },
   youtube:   { key: "youtube",   label: "YouTube",     colour: "#ff4444" },
   instagram: { key: "instagram", label: "Instagram",   colour: "#e4489b" },
   news:      { key: "news",      label: "News",        colour: "#f0b429" },
@@ -26,6 +27,7 @@ export function platformFor(item) {
   const url = item.url || "";
   const src = item.source || "";
 
+  if (item.origin === "tiktok" || /tiktok\.com/.test(url)) return PLATFORMS.tiktok;
   if (item.origin === "social" || /x\.com|twitter\.com/.test(url)) return PLATFORMS.x;
   if (item.origin === "wildlife") return PLATFORMS.inat;
   if (item.origin === "hyperlocal") return PLATFORMS.local;

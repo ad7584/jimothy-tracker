@@ -57,7 +57,27 @@ export function cluster(candidates) {
 
   return clusters
     .map((cl) => {
-      const originCount = cl.origins.size;
+      // Independence check for hydrate-by-id members (TikTok, X). The recent
+      // sightings travelled TikTok → X → Reddit as ONE person's claim wearing
+      // three hats — and our own harvester ingests exactly that chain. If a
+      // member's platform id appears inside another member's text or URL, the
+      // cited member arrived via that referrer and is bridged, not
+      // independent: it contributes its content but not a second origin.
+      const bridged = new Set();
+      for (const m of cl.members) {
+        const key = m.item.meta?.tiktokId || m.item.meta?.tweetId;
+        if (!key) continue;
+        if (cl.members.some((o) => o !== m &&
+          `${o.item.text || ""} ${o.item.url || ""}`.includes(key))) {
+          bridged.add(m);
+        }
+      }
+      const origins = new Set();
+      for (const m of cl.members) if (!bridged.has(m)) origins.add(m.item.origin);
+      // Bridging discounts, never erases — the members are still real posts.
+      if (!origins.size) for (const m of cl.members) origins.add(m.item.origin);
+
+      const originCount = origins.size;
       const best = Math.max(...cl.members.map((m) => m.ex.score));
       // Independent corroboration outranks any single item's text score.
       let band = "UNVERIFIED";
@@ -82,7 +102,7 @@ export function cluster(candidates) {
         band,
         topScore: Number(best.toFixed(3)),
         originCount,
-        origins: [...cl.origins],
+        origins: [...origins],
         sources: [...cl.sources],
         recognitionHits: recog.length,
         members: cl.members.map((m) => ({

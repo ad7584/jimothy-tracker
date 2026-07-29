@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { WEB_DIR, PORT } from "./config.mjs";
 import { subscribe, recent, stats } from "./engine/ops.mjs";
 import { tapeIndex, getFrame } from "./sources/camtape.mjs";
+import { getThumb } from "./sources/tiktok.mjs";
 
 // The Railway origin exists to serve /api behind the Vercel proxy, but it also
 // answers with a byte-identical copy of the dashboard — which Google indexes
@@ -139,6 +140,22 @@ export class Server {
           "X-Frame-At": String(frame.at),
         });
         return res.end(frame.buf);
+      }
+      if (p === "/api/tiktok") return this.json(res, this.getState().tiktok || [], 200, req);
+      // /api/tikthumb/<videoId> — cached TikTok poster frame. Like /api/camframe,
+      // this is already-compressed binary and skips json(). Long cache lifetime:
+      // a video's poster never changes, and the id is the cache key.
+      if (p.startsWith("/api/tikthumb/")) {
+        const id = decodeURIComponent(p.split("/")[3] || "");
+        const thumb = await getThumb(id);
+        if (!thumb) { res.writeHead(404); return res.end("no thumbnail"); }
+        res.writeHead(200, {
+          "Content-Type": thumb.type,
+          "Content-Length": thumb.buf.length,
+          "Cache-Control": "public, max-age=86400, immutable",
+          "Access-Control-Allow-Origin": "*",
+        });
+        return res.end(thumb.buf);
       }
       if (p === "/api/stories") return this.json(res, this.getState().stories || [], 200, req);
       if (p === "/api/stream") return this.stream(req, res);

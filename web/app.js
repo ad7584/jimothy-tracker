@@ -405,6 +405,7 @@ function render(s) {
   renderTicker(s);
   renderChips(s);
   renderFeed(s);
+  renderTikTok(s);
   renderZones(s);
   renderRecognition(s);
   renderCams(s);
@@ -474,6 +475,96 @@ function renderFeed(s) {
     "Polled, not streamed — Mastodon 45s · Reddit 150s · news 240s. No public realtime socket exists for these platforms.";
 }
 
+/* ── tiktok ─────────────────────────────────────────────────────────── */
+/* Nothing embeds until pressed. Each TikTok iframe pulls ~300KB of
+   third-party assets, so the reader decides who gets embedded — one at a
+   time. Poster frames come from our own cache (/api/tikthumb): TikTok's CDN
+   thumbnail URLs are signed and die ~48h after issue, so hotlinking them
+   would leave every card broken within two days. */
+let ttPlaying = null;   // videoId of the card currently embedded, if any
+
+const TT_STATUS = {
+  CONSISTENT_WITH_JIMOTHY: { label: "CONSISTENT W/ JIMOTHY", cls: "tts-hit" },
+  RACCOON_NOT_JIMOTHY:     { label: "RACCOON · NOT HIM",     cls: "tts-no" },
+  NOT_RACCOON:             { label: "NOT A RACCOON",         cls: "tts-no" },
+  BUDGET_CAPPED:           { label: "QUEUED",                cls: "tts-wait" },
+  UNSCORED:                { label: "UNSCORED",              cls: "tts-wait" },
+  ERROR:                   { label: "UNSCORED",              cls: "tts-wait" },
+};
+
+function renderTikTok(s) {
+  const list = s.tiktok || [];
+  const hits = list.filter((t) => t.recognition?.status === "CONSISTENT_WITH_JIMOTHY").length;
+  $("ttCount").textContent = list.length
+    ? `${list.length} videos${hits ? ` · ${hits} consistent` : ""}`
+    : "—";
+
+  // Never clobber a playing embed on a state push — same rule as the camera
+  // stage. Counts above stay live; cards repaint after the reader closes it
+  // (✕ button or Escape).
+  if (ttPlaying) return;
+
+  $("tiktok").innerHTML = list.length ? list.map((t) => {
+    const st = (t.recognition && TT_STATUS[t.recognition.status]) || TT_STATUS.UNSCORED;
+    return `
+    <article class="ttcard" data-id="${esc(t.id)}">
+      <button class="ttthumb" data-id="${esc(t.id)}" aria-label="Play TikTok by @${esc(t.author || "unknown")}">
+        ${t.thumb ? `<img src="${API}${esc(t.thumb)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ""}
+        <span class="ttbadge ${st.cls}">${st.label}</span>
+        <span class="ttplay" aria-hidden="true">▶</span>
+      </button>
+      <p class="ttmeta"><b>@${esc(t.author || "unknown")}</b> · ${fmtAge(t.ts)}${
+        t.zone ? ` · ▸ ${esc(t.zone)}` : ""} ·
+        <a href="${esc(t.url)}" target="_blank" rel="noopener">open ↗</a></p>
+      ${t.title ? `<p class="tttitle">${esc(t.title)}</p>` : ""}
+      ${t.recognition?.reasoning ? `<p class="ttwhy"><b>vision:</b> ${esc(t.recognition.reasoning)}</p>` : ""}
+    </article>`;
+  }).join("") : `<p class="empty">No TikTok videos discovered yet. Links are harvested from Bluesky,
+    Reddit, Mastodon and news items as they appear — TikTok itself offers no public search.</p>`;
+
+  for (const b of $("tiktok").querySelectorAll(".ttthumb")) {
+    b.addEventListener("click", () => playTikTok(b.dataset.id));
+  }
+
+  $("ttNote").innerHTML = list.length
+    ? `Playback is TikTok's own embedded player, loaded only when you press play.
+       A verdict applies to the <em>poster frame</em>, not every frame of the video.`
+    : "";
+}
+
+function playTikTok(id) {
+  if (!id || ttPlaying === id) return;
+  if (ttPlaying) {
+    // One embed at a time: repaint (which restores the old card's poster),
+    // then promote this one.
+    ttPlaying = null;
+    renderTikTok(STATE);
+  }
+  const host = $("tiktok").querySelector(`.ttthumb[data-id="${id}"]`);
+  if (!host) return;
+  ttPlaying = id;
+  // Swap the <button> for a plain container — an iframe inside a button is
+  // invalid HTML and hostile to keyboard and screen-reader users — and give
+  // the embed an explicit close control, or the first click would freeze this
+  // panel for the rest of the visit.
+  const wrap = document.createElement("div");
+  wrap.className = "ttthumb playing";
+  wrap.innerHTML = `<iframe src="https://www.tiktok.com/embed/v2/${encodeURIComponent(id)}"
+    title="TikTok video" loading="lazy"
+    allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    <button class="ttclose" aria-label="Close video">✕</button>`;
+  host.replaceWith(wrap);
+  wrap.querySelector(".ttclose")?.addEventListener("click", stopTikTok);
+  wrap.querySelector(".ttclose")?.focus();
+}
+
+/** Close the playing embed and let the panel repaint. Also bound to Escape. */
+function stopTikTok() {
+  if (!ttPlaying) return;
+  ttPlaying = null;
+  if (STATE) renderTikTok(STATE);
+}
+
 function renderZones(s) {
   $("zones").innerHTML = (s.zones || []).map((r) => `
     <div class="zrow" data-zone="${esc(r.zone)}" tabindex="0">
@@ -509,7 +600,7 @@ function renderRecognition(s) {
   const r = s.recognition || [];
   $("recognition").innerHTML = r.length ? r.slice(0, 24).map((x) => `
     <div class="ritem${x.kind === "camera" ? " is-cam" : ""}">
-      <img class="rthumb" src="${esc(x.imageUrl)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <img class="rthumb" src="${esc(String(x.imageUrl || "").startsWith("/") ? API + x.imageUrl : x.imageUrl)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
       <div class="rbody">
         <span class="rstat rs-${esc(x.status)}">${esc(x.status.replace(/_/g, " "))}</span>
         ${x.kind === "camera" ? `<span class="rkind">LIVE CAM</span>` : ""}
@@ -1149,6 +1240,7 @@ function buildPalette() {
       run: () => { platformFilter = new Set([p.key]); renderChips(STATE); renderFeed(STATE); jump("feed")(); } })),
     { kind: "filter", label: "Clear feed filters", run: () => { platformFilter.clear(); renderChips(STATE); renderFeed(STATE); } },
     { kind: "panel", label: "Live feed", run: jump("feed") },
+    { kind: "panel", label: "TikTok watch", run: jump("tiktokPanel") },
     { kind: "panel", label: "Recognition queue", run: jump("recognition") },
     { kind: "panel", label: "Wildlife cams", run: jump("camStage") },
     { kind: "panel", label: "Source health", run: jump("health") },
@@ -1184,7 +1276,7 @@ $("palette").addEventListener("click", (e) => { if (e.target.id === "palette") c
 document.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openPalette(); return; }
   if ($("palette").hidden) {
-    if (e.key === "Escape") $("dossier").hidden = true;
+    if (e.key === "Escape") { $("dossier").hidden = true; stopTikTok(); }
     // Arrow keys drive the carousel when nothing is focused (Jakob's Law).
     if (e.target === document.body && e.key === "ArrowRight") go(cIdx + 1);
     if (e.target === document.body && e.key === "ArrowLeft") go(cIdx - 1);
